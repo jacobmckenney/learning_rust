@@ -35,15 +35,18 @@ impl<T: PartialOrd> LL<T> {
         return None;
     }
 
-    pub fn contains(&self, value: &T) -> bool {
+    pub fn contains(&self, value: T) -> bool {
         let mut curr: &ListLink<T> = &self.head;
-        while curr.is_some() {
-            if curr.as_ref().unwrap().value == *value {
-                return true;
+        loop {
+            if let Some(link) = curr {
+                if link.value == value {
+                    return true;
+                }
+                curr = &link.next;
+            } else {
+                return false;
             }
-            curr = &curr.as_ref().unwrap().next;
         }
-        return false;
     }
 
     pub fn len(&mut self) -> usize {
@@ -66,7 +69,8 @@ mod ll_tests {
         let mut ll: LL<i32> = LL::new();
         let val: i32 = 123;
         ll.push(val);
-        assert!(ll.contains(&val));
+        assert!(ll.contains(val));
+        assert_eq!(ll.len(), 1);
     }
 
     #[test]
@@ -74,7 +78,7 @@ mod ll_tests {
         let mut ll: LL<String> = LL::new();
         let val: String = String::from("Testing");
         ll.push(val.to_string());
-        assert!(ll.contains(&val));
+        assert!(ll.contains(val));
     }
 
     #[test]
