@@ -1,6 +1,10 @@
 mod bst;
+mod hashmap;
 mod linked_list;
+use std::hash::Hash;
+
 use crate::bst::BST;
+use crate::hashmap::HashMap;
 fn main() {
     let mut bst: BST<i32> = BST::new();
     let inserts: Vec<i32> = vec![7, 2, 5, 1, 4];
@@ -8,4 +12,6 @@ fn main() {
         bst.put(*test_value);
     }
     bst.in_order();
+    let hm: HashMap<i32, i32> = HashMap::new(10);
+    hm.put(1, 100);
 }
