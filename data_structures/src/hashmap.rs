@@ -1,6 +1,8 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+const LOAD_MAX: f64 = 0.75;
+
 struct Bucket<K, V> {
     items: Vec<(K, V)>,
 }
@@ -17,9 +19,10 @@ pub struct HashMap<K: Hash + Eq, V: Copy> {
 
 impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
     pub fn new(initial_size: usize) -> HashMap<K, V> {
-        let mut buckets: Vec<Bucket<K, V>> = Vec::with_capacity(initial_size);
-        (0..initial_size).for_each(|_i| buckets.push(Bucket::new()));
-        return HashMap { size: 0, buckets };
+        return HashMap {
+            size: 0,
+            buckets: HashMap::initialize_buckets(initial_size),
+        };
     }
 
     pub fn is_empty(&self) -> bool {
@@ -31,7 +34,7 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
     }
 
     fn search(&mut self, key: K, value: Option<V>) -> Option<V> {
-        let bucket: &mut Bucket<K, V> = self.get_bucket(&key);
+        let bucket: &mut Bucket<K, V> = self.get_bucket(&key, self.buckets.len());
         for &mut (ref k, ref mut v) in bucket.items.iter_mut() {
             if k == &key {
                 if value.is_some() {
@@ -51,16 +54,36 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
     }
 
     pub fn put(&mut self, key: K, value: V) -> Option<V> {
-        // TODO: check if map already contains key and resize
-        let val = self.search(key, Some(value));
+        // TODO: check if map already contains key and resize\
+        let load_factor = self.size() as f64 / self.buckets.capacity() as f64;
+        if load_factor > LOAD_MAX {
+            println!("Rehashing... {}", self.buckets.capacity());
+            self.resize();
+        }
+        let val: Option<V> = self.search(key, Some(value));
         if val.is_none() {
             self.size += 1;
         }
         return val;
     }
 
+    fn resize(&mut self) {
+        let new_size = self.buckets.capacity() * 2;
+        let mut new_buckets: Vec<Bucket<K, V>> =
+            HashMap::initialize_buckets(self.buckets.capacity() * 2);
+        for _i in 0..self.buckets.len() {
+            let mut bucket = self.buckets.remove(0);
+            for _j in 0..bucket.items.len() {
+                let item = bucket.items.remove(0);
+                let new_hash = HashMap::<K, V>::get_index(&item.0, new_size);
+                new_buckets[new_hash].items.push(item);
+            }
+        }
+        self.buckets = new_buckets;
+    }
+
     pub fn remove(&mut self, key: K) -> bool {
-        let bucket: &mut Bucket<K, V> = self.get_bucket(&key);
+        let bucket: &mut Bucket<K, V> = self.get_bucket(&key, self.buckets.len());
         for (i, &mut (ref k, _)) in bucket.items.iter_mut().enumerate() {
             if k == &key {
                 bucket.items.remove(i);
@@ -72,24 +95,25 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
     }
 
     pub fn contains(&mut self, key: K) -> bool {
-        return match self.search(key, None) {
-            Some(_) => true,
-            None => false,
-        };
+        return self.search(key, None).is_some();
     }
 
-    fn resize(&mut self) {}
+    fn initialize_buckets(new_size: usize) -> Vec<Bucket<K, V>> {
+        let mut buckets: Vec<Bucket<K, V>> = Vec::with_capacity(new_size);
+        (0..new_size).for_each(|_i| buckets.push(Bucket::new()));
+        return buckets;
+    }
 
-    fn get_bucket(&mut self, key: &K) -> &mut Bucket<K, V> {
-        let hashed_key: usize = self.get_index(&key);
+    fn get_bucket(&mut self, key: &K, num_buckets: usize) -> &mut Bucket<K, V> {
+        let hashed_key: usize = HashMap::<K, V>::get_index(&key, num_buckets);
         let bucket_ref: &mut Bucket<K, V> = &mut self.buckets[hashed_key];
         return bucket_ref;
     }
 
-    fn get_index(&self, key: &K) -> usize {
+    fn get_index(key: &K, num_buckets: usize) -> usize {
         let mut hasher: DefaultHasher = DefaultHasher::new();
         key.hash(&mut hasher);
-        return (hasher.finish() % self.buckets.len() as u64) as usize;
+        return (hasher.finish() % num_buckets as u64) as usize;
     }
 }
 
@@ -137,5 +161,16 @@ mod hashmap_tests {
         let value = 100;
         assert_eq!(hm.put(key, value), None);
         assert_eq!(hm.get(key).unwrap(), value);
+    }
+
+    #[test]
+    fn resize() {
+        let mut hm: HashMap<i32, i32> = HashMap::new(2);
+        for x in 0..1000 {
+            hm.put(x, x);
+        }
+        for x in 0..1000 {
+            assert!(hm.contains(x));
+        }
     }
 }
