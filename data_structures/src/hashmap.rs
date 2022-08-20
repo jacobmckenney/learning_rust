@@ -52,7 +52,11 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
 
     pub fn put(&mut self, key: K, value: V) -> Option<V> {
         // TODO: check if map already contains key and resize
-        return self.search(key, Some(value));
+        let val = self.search(key, Some(value));
+        if val.is_none() {
+            self.size += 1;
+        }
+        return val;
     }
 
     pub fn remove(&mut self, key: K) -> bool {
@@ -60,6 +64,7 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
         for (i, &mut (ref k, _)) in bucket.items.iter_mut().enumerate() {
             if k == &key {
                 bucket.items.remove(i);
+                self.size -= 1;
                 return true;
             }
         }
@@ -95,6 +100,7 @@ mod hashmap_tests {
     fn new() {
         let hm: HashMap<i32, i32> = HashMap::new(10);
         assert_eq!(hm.size(), 0);
+        assert!(hm.is_empty());
     }
 
     #[test]
@@ -104,6 +110,7 @@ mod hashmap_tests {
         let value = 100;
         hm.put(key, value);
         assert!(hm.contains(key));
+        assert_eq!(hm.size(), 1);
     }
 
     #[test]
@@ -113,7 +120,8 @@ mod hashmap_tests {
         let value = 100;
         hm.put(key, value);
         assert!(hm.remove(key));
-        assert!(!hm.contains(key))
+        assert!(!hm.contains(key));
+        assert!(hm.is_empty());
     }
 
     #[test]
