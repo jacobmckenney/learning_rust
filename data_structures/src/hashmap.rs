@@ -54,7 +54,6 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
     }
 
     pub fn put(&mut self, key: K, value: V) -> Option<V> {
-        // TODO: check if map already contains key and resize\
         let load_factor = self.size() as f64 / self.buckets.capacity() as f64;
         if load_factor > LOAD_MAX {
             println!("Rehashing... {}", self.buckets.capacity());
