@@ -71,10 +71,8 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
         let new_size = self.buckets.capacity() * 2;
         let mut new_buckets: Vec<Bucket<K, V>> =
             HashMap::initialize_buckets(self.buckets.capacity() * 2);
-        for _i in 0..self.buckets.len() {
-            let mut bucket = self.buckets.remove(0);
-            for _j in 0..bucket.items.len() {
-                let item = bucket.items.remove(0);
+        for bucket in self.buckets.drain(0..self.buckets.len()) {
+            for item in bucket.items.into_iter() {
                 let new_hash = HashMap::<K, V>::get_index(&item.0, new_size);
                 new_buckets[new_hash].items.push(item);
             }
