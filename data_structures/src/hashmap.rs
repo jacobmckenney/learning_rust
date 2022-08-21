@@ -7,17 +7,17 @@ struct Bucket<K, V> {
     items: Vec<(K, V)>,
 }
 
-impl<K: Hash + Eq, V: Copy> Bucket<K, V> {
+impl<K: Hash + Eq, V> Bucket<K, V> {
     pub fn new() -> Bucket<K, V> {
         Bucket { items: Vec::new() }
     }
 }
-pub struct HashMap<K: Hash + Eq, V: Copy> {
+pub struct HashMap<K: Hash + Eq, V> {
     size: usize,
     buckets: Vec<Bucket<K, V>>,
 }
 
-impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
+impl<K: Hash + Eq, V> HashMap<K, V> {
     pub fn new(initial_size: usize) -> HashMap<K, V> {
         return HashMap {
             size: 0,
@@ -35,16 +35,13 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
 
     fn search(&mut self, key: K, value: Option<V>) -> Option<V> {
         let bucket: &mut Bucket<K, V> = self.get_bucket(&key, self.buckets.len());
-        for &mut (ref k, ref mut v) in bucket.items.iter_mut() {
-            if k == &key {
-                if value.is_some() {
-                    return Some(std::mem::replace(v, value.unwrap()));
-                }
-                return Some(*v);
-            }
-        }
+        let index = bucket.items.iter().position(|(k, _)| *k == key);
         if value.is_some() {
             bucket.items.push((key, value.unwrap()));
+        }
+        if index.is_some() {
+            let (_, old_value) = bucket.items.remove(index.unwrap());
+            return Some(old_value);
         }
         return None;
     }
@@ -56,7 +53,6 @@ impl<K: Hash + Eq, V: Copy> HashMap<K, V> {
     pub fn put(&mut self, key: K, value: V) -> Option<V> {
         let load_factor = self.size() as f64 / self.buckets.capacity() as f64;
         if load_factor > LOAD_MAX {
-            println!("Rehashing... {}", self.buckets.capacity());
             self.resize();
         }
         let val: Option<V> = self.search(key, Some(value));
