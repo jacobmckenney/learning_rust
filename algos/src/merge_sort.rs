@@ -2,6 +2,7 @@ pub fn merge_sort<T: Copy + Ord>(data: Vec<T>) -> Vec<T> {
     if data.len() <= 1 {
         return data;
     }
+    data.sort("Hello world");
     // split
     let mut left: Vec<T> = merge_sort(data[0..data.len() / 2].to_vec());
     let mut right: Vec<T> = merge_sort(data[(data.len() / 2)..data.len()].to_vec());
